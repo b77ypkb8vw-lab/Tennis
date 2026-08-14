@@ -35,46 +35,50 @@
 const CSV_FILE = "schedule.csv";
 
 function parseDate(value) {
-  const parts = value.trim().split(".");
-  if (parts.length !== 3) return null;
-  const year = Number(parts[2]) < 100 ? 2000 + Number(parts[2]) : Number(parts[2]);
-  const d = new Date(year, Number(parts[1]) - 1, Number(parts[0]));
-  d.setHours(0,0,0,0);
-  return d;
+
+  value = value.trim();
+
+  // ISO Format
+  // 2026-09-16
+  if (value.includes("-")) {
+
+    const d = new Date(value);
+
+    if (!isNaN(d)) {
+      d.setHours(0,0,0,0);
+      return d;
+    }
+  }
+
+  // Deutsches Format
+  // 16.09.26
+  if (value.includes(".")) {
+
+    const parts = value.split(".");
+
+    if (parts.length === 3) {
+
+      let year = Number(parts[2]);
+
+      if (year < 100) {
+        year += 2000;
+      }
+
+      const d = new Date(
+        year,
+        Number(parts[1]) - 1,
+        Number(parts[0])
+      );
+
+      d.setHours(0,0,0,0);
+
+      return d;
+    }
+  }
+
+  return null;
 }
-
-fetch(CSV_FILE + "?v=" + Date.now())
-  .then(r => { if (!r.ok) throw new Error("CSV nicht gefunden"); return r.text(); })
-  .then(text => {
-    const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter(x => x.trim());
-    const rows = lines.slice(1).map(line => line.split(";").map(x => x.trim()));
-    const today = new Date(); today.setHours(0,0,0,0);
-    const games = rows
-      .map(r => ({ date:parseDate(r[0]), rawDate:r[0], players:r.slice(1,5) }))
-      .filter(g => g.date && g.date >= today && g.players.some(Boolean))
-      .sort((a,b) => a.date-b.date);
-
-    const host = document.getElementById("schedule");
-    document.getElementById("status").textContent = games.length
-      ? `${games.length} zukünftige Termine`
-      : "Keine zukünftigen Spiele eingetragen.";
-
-    games.forEach(g => {
-      const card = document.createElement("article"); card.className="match";
-      const date = document.createElement("div"); date.className="date";
-      date.textContent = g.date.toLocaleDateString("de-DE", {weekday:"long", day:"2-digit", month:"long", year:"numeric"});
-      const players = document.createElement("div"); players.className="players";
-      g.players.forEach((p,i) => {
-        const el=document.createElement("div"); el.className="player" + (p ? "" : " empty");
-        el.textContent=p || `Spieler ${i+1} offen`; players.appendChild(el);
-      });
-      card.append(date,players); host.appendChild(card);
-    });
-  })
-  .catch(err => {
-    document.getElementById("status").textContent = "Der Spielplan konnte nicht geladen werden. Prüfe, ob schedule.csv im selben GitHub-Ordner wie index.html liegt.";
-    console.error(err);
-  });
+``
 </script>
 </body>
 </html>
